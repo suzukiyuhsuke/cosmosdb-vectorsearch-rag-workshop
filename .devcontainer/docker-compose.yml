@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  workspace:
+    build: 
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - backend-node-modules:/workspace/backend/node_modules
+      - frontend-node-modules:/workspace/frontend/node_modules
+      - backend-venv:/workspace/backend/venv
+    command: sleep infinity
+    environment:
+      # Cosmos DB設定
+      - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
+      - COSMOS_KEY=${COSMOS_KEY}
+      - COSMOS_DATABASE=${COSMOS_DATABASE:-ragdatabase}
+      - COSMOS_CONTAINER=${COSMOS_CONTAINER:-documents}
+      # GPT設定
+      - GPT_API_KEY=${GPT_API_KEY:-${AZURE_OPENAI_API_KEY}}
+      - GPT_ENDPOINT=${GPT_ENDPOINT:-${AZURE_OPENAI_ENDPOINT}}
+      - GPT_DEPLOYMENT=${GPT_DEPLOYMENT:-${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}}
+      - GPT_API_VERSION=${GPT_API_VERSION:-${AZURE_OPENAI_API_VERSION:-2024-02-01}}
+      # Embedding設定
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${AZURE_OPENAI_API_KEY}}
+      - EMBEDDING_ENDPOINT=${EMBEDDING_ENDPOINT:-${AZURE_OPENAI_ENDPOINT}}
+      - EMBEDDING_DEPLOYMENT=${EMBEDDING_DEPLOYMENT:-${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-text-embedding-ada-002}}
+      - EMBEDDING_API_VERSION=${EMBEDDING_API_VERSION:-${AZURE_OPENAI_API_VERSION:-2024-02-01}}
+      # 後方互換性のため（非推奨）
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-02-01}
+      - AZURE_OPENAI_EMBEDDING_DEPLOYMENT=${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-text-embedding-ada-002}
+    
+  backend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/backend.Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - backend-venv:/workspace/backend/venv
+    depends_on:
+      - workspace
+    ports:
+      - 8000:8000
+    environment:
+      # Cosmos DB設定
+      - COSMOS_ENDPOINT=${COSMOS_ENDPOINT}
+      - COSMOS_KEY=${COSMOS_KEY}
+      - COSMOS_DATABASE=${COSMOS_DATABASE:-ragdatabase}
+      - COSMOS_CONTAINER=${COSMOS_CONTAINER:-documents}
+      # GPT設定
+      - GPT_API_KEY=${GPT_API_KEY:-${AZURE_OPENAI_API_KEY}}
+      - GPT_ENDPOINT=${GPT_ENDPOINT:-${AZURE_OPENAI_ENDPOINT}}
+      - GPT_DEPLOYMENT=${GPT_DEPLOYMENT:-${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}}
+      - GPT_API_VERSION=${GPT_API_VERSION:-${AZURE_OPENAI_API_VERSION:-2024-02-01}}
+      # Embedding設定
+      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${AZURE_OPENAI_API_KEY}}
+      - EMBEDDING_ENDPOINT=${EMBEDDING_ENDPOINT:-${AZURE_OPENAI_ENDPOINT}}
+      - EMBEDDING_DEPLOYMENT=${EMBEDDING_DEPLOYMENT:-${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-text-embedding-ada-002}}
+      - EMBEDDING_API_VERSION=${EMBEDDING_API_VERSION:-${AZURE_OPENAI_API_VERSION:-2024-02-01}}
+      # 後方互換性のため（非推奨）
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-02-01}
+      - AZURE_OPENAI_EMBEDDING_DEPLOYMENT=${AZURE_OPENAI_EMBEDDING_DEPLOYMENT:-text-embedding-ada-002}
+    command: bash -c "cd /workspace/backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/frontend.Dockerfile
+    volumes:
+      - ..:/workspace:cached
+      - frontend-node-modules:/workspace/frontend/node_modules
+    depends_on:
+      - workspace
+      - backend
+    ports:
+      - 5173:5173
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    command: bash -c "cd /workspace/frontend && npm run dev -- --host 0.0.0.0"
+
+volumes:
+  backend-node-modules:
+  frontend-node-modules:
+  backend-venv:

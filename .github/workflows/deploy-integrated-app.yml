@@ -1,0 +1,66 @@
+name: Deploy Integrated App to Azure App Service
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm install
+        npm run build
+        
+    - name: Prepare backend with frontend files
+      run: |
+        mkdir -p backend/static
+        cp -r frontend/dist/* backend/static/
+        cd backend
+        pip install -r requirements.txt
+        pip install gunicorn
+        echo "gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000" > startup.txt
+        
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+        
+    - name: Deploy to Azure App Service
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'rag-chatbot-app'  # Azure App Service の名前
+        package: './backend'
+        
+    - name: Configure App Settings
+      run: |
+        az webapp config appsettings set --resource-group rag-chatbot-rg --name rag-chatbot-app --settings \
+          COSMOS_ENDPOINT="${{ secrets.COSMOS_ENDPOINT }}" \
+          COSMOS_KEY="${{ secrets.COSMOS_KEY }}" \
+          COSMOS_DATABASE="ragdatabase" \
+          COSMOS_CONTAINER="documents" \
+          GPT_API_KEY="${{ secrets.GPT_API_KEY }}" \
+          GPT_ENDPOINT="${{ secrets.GPT_ENDPOINT }}" \
+          GPT_DEPLOYMENT="gpt-4o" \
+          GPT_API_VERSION="2024-02-01" \
+          EMBEDDING_API_KEY="${{ secrets.EMBEDDING_API_KEY }}" \
+          EMBEDDING_ENDPOINT="${{ secrets.EMBEDDING_ENDPOINT }}" \
+          EMBEDDING_DEPLOYMENT="text-embedding-ada-002" \
+          EMBEDDING_API_VERSION="2024-02-01"

@@ -1,0 +1,5 @@
+# バックエンドのrequirements.txtの内容をコピー
+-r backend/requirements.txt
+
+# App Serviceデプロイに必要な追加パッケージ
+gunicorn==21.2.0
