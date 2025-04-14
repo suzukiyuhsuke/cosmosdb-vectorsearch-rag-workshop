@@ -1,0 +1,25 @@
+{
+    "indexingMode": "consistent",
+    "automatic": true,
+    "includedPaths": [
+      {
+        "path": "/*",
+        "indexes": [
+          {
+            "dataType": "Vector",
+            "kind": "Vector",
+            "dimensions": 1536,
+            "configuration": {
+              "distanceFunction": "cosine"
+            }
+          }
+        ]
+      }
+    ],
+    "excludedPaths": [
+        {
+            "path": "/\"_etag\"/?"
+        }
+    ],
+    "fullTextIndexes": []
+}
